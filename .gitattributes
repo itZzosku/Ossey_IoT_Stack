@@ -1,0 +1,9 @@
+# Edited on Windows, run on Debian — force LF so nothing breaks on the Linux side.
+* text=auto eol=lf
+
+# Be explicit about the files that genuinely break with CRLF:
+*.sh    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.conf  text eol=lf
+.env*   text eol=lf

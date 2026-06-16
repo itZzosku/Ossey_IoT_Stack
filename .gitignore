@@ -1,0 +1,12 @@
+# Secrets
+.env
+
+# Runtime data — never commit this
+/volumes/
+
+# Zigbee2MQTT writes its network key into here; keep it out of git
+/services/zigbee2mqtt/data/configuration.yaml
+/services/zigbee2mqtt/data/database.db
+/services/zigbee2mqtt/data/coordinator_backup.json
+/services/zigbee2mqtt/data/log/
+/services/mosquitto/config/passwd

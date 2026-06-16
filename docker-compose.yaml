@@ -1,0 +1,160 @@
+# Self-owned IoT stack — based on your IOTstack compose, cleaned so nothing
+# regenerates it.
+#
+# Image strategy: :latest for the bring-up so you start on current versions,
+# EXCEPT influxdb — its :latest tag now points to InfluxDB 3 Core (no Flux,
+# short retention), which would break HA/Grafana. Pinned to the v2 line.
+# Once the stack is up and working, pin the rest too (see `docker compose images`).
+
+name: iot-stack
+
+services:
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    user: "0"
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=${TZ}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - ./volumes/grafana/data:/var/lib/grafana
+      - ./volumes/grafana/log:/var/log/grafana
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [iot]
+
+  influxdb2:
+    container_name: influxdb2
+    image: influxdb:2          # v2 line ONLY. Do NOT use :latest — it points to v3 Core.
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - TZ=${TZ}
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_INIT_USERNAME}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_INIT_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_INIT_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_INIT_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_INIT_TOKEN}
+    volumes:
+      - ./volumes/influxdb2/data:/var/lib/influxdb2
+      - ./volumes/influxdb2/config:/etc/influxdb2
+      - ./volumes/influxdb2/backup:/var/lib/backup
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [iot]
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./services/mosquitto/config:/mosquitto/config   # mosquitto.conf — tracked in git
+      - ./volumes/mosquitto/data:/mosquitto/data
+      - ./volumes/mosquitto/log:/mosquitto/log
+    networks: [iot]
+
+  nodered:
+    container_name: nodered
+    image: nodered/node-red:latest
+    restart: unless-stopped
+    user: "0"
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "1880:1880"
+    volumes:
+      - ./volumes/nodered/data:/data
+    networks: [iot]
+    depends_on: [mosquitto]
+
+  portainer-ce:
+    container_name: portainer-ce
+    image: portainer/portainer-ce:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./volumes/portainer-ce/data:/data
+    networks: [iot]
+
+  tasmoadmin:
+    container_name: tasmoadmin
+    image: ghcr.io/tasmoadmin/tasmoadmin:latest
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "8088:80"
+    volumes:
+      - ./volumes/tasmoadmin/data:/data
+    networks: [iot]
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt:latest
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=/dev/ttyACM0
+      - ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER=ember   # ZBDongle-E = Silabs/ember. ZBDongle-P would be zstack.
+      - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://mosquitto:1883
+      - ZIGBEE2MQTT_CONFIG_MQTT_USER=${MQTT_USER}
+      - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD=${MQTT_PASSWORD}
+      - ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED=true
+      - ZIGBEE2MQTT_CONFIG_ADVANCED_LOG_SYMLINK_CURRENT=true
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./volumes/zigbee2mqtt/data:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      - "${ZIGBEE_ADAPTER}:/dev/ttyACM0"
+    networks: [iot]
+    depends_on: [mosquitto]
+
+  telegraf:
+    container_name: telegraf
+    image: telegraf:latest
+    restart: unless-stopped
+    hostname: iotstack
+    environment:
+      - TZ=${TZ}
+      # Telegraf substitutes these into telegraf.conf at startup:
+      - INFLUX_TOKEN=${INFLUXDB_INIT_TOKEN}
+      - INFLUX_ORG=${INFLUXDB_INIT_ORG}
+      - INFLUX_BUCKET=${TELEGRAF_BUCKET:-telegraf}
+      - MQTT_USER=${MQTT_USER}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+    ports:
+      - "8092:8092/udp"
+      - "8094:8094/tcp"
+      - "8125:8125/udp"
+    volumes:
+      - ./services/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [iot]
+    depends_on: [influxdb2, mosquitto]
+
+networks:
+  iot:
+    name: iot
+    driver: bridge
