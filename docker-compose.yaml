@@ -154,6 +154,26 @@ services:
     networks: [iot]
     depends_on: [influxdb2, mosquitto]
 
+  uptime-kuma:
+      image: louislam/uptime-kuma:2
+      container_name: uptime-kuma
+      restart: unless-stopped
+      volumes:
+        - ./volumes/uptime-kuma/data:/app/data
+      ports:
+        - "3001:3001"
+      networks: [iot]
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8080"
+    networks: [iot]
+
 networks:
   iot:
     name: iot
