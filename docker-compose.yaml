@@ -32,7 +32,7 @@ services:
 
   influxdb2:
     container_name: influxdb2
-    image: influxdb:2          # v2 line ONLY. Do NOT use :latest — it points to v3 Core.
+    image: influxdb:2 # v2 line ONLY. Do NOT use :latest — it points to v3 Core.
     restart: unless-stopped
     ports:
       - "8086:8086"
@@ -65,7 +65,7 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ./services/mosquitto/config:/mosquitto/config   # mosquitto.conf — tracked in git
+      - ./services/mosquitto/config:/mosquitto/config # mosquitto.conf — tracked in git
       - ./volumes/mosquitto/data:/mosquitto/data
       - ./volumes/mosquitto/log:/mosquitto/log
     networks: [iot]
@@ -114,7 +114,7 @@ services:
     restart: unless-stopped
     environment:
       - TZ=${TZ}
-      - ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER=ember   # ZBDongle-E = Silabs/ember. ZBDongle-P would be zstack.
+      - ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER=ember # ZBDongle-E = Silabs/ember. ZBDongle-P would be zstack.
       - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://mosquitto:1883
       - ZIGBEE2MQTT_CONFIG_MQTT_USER=${MQTT_USER}
       - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD=${MQTT_PASSWORD}
@@ -155,14 +155,15 @@ services:
     depends_on: [influxdb2, mosquitto]
 
   uptime-kuma:
-      image: louislam/uptime-kuma:2
-      container_name: uptime-kuma
-      restart: unless-stopped
-      volumes:
-        - ./volumes/uptime-kuma/data:/app/data
-      ports:
-        - "3001:3001"
-      networks: [iot]
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - ./volumes/uptime-kuma/data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "3001:3001"
+    networks: [iot]
 
   dozzle:
     image: amir20/dozzle:latest
