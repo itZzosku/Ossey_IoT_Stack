@@ -114,20 +114,20 @@ services:
     restart: unless-stopped
     environment:
       - TZ=${TZ}
-      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=/dev/ttyACM0
       - ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER=ember   # ZBDongle-E = Silabs/ember. ZBDongle-P would be zstack.
       - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://mosquitto:1883
       - ZIGBEE2MQTT_CONFIG_MQTT_USER=${MQTT_USER}
       - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD=${MQTT_PASSWORD}
       - ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED=true
       - ZIGBEE2MQTT_CONFIG_ADVANCED_LOG_SYMLINK_CURRENT=true
+      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=${ZIGBEE_ADAPTER}
     ports:
       - "8080:8080"
     volumes:
       - ./volumes/zigbee2mqtt/data:/app/data
       - /run/udev:/run/udev:ro
     devices:
-      - "${ZIGBEE_ADAPTER}:/dev/ttyACM0"
+      - "${ZIGBEE_ADAPTER}:${ZIGBEE_ADAPTER}"
     networks: [iot]
     depends_on: [mosquitto]
 
