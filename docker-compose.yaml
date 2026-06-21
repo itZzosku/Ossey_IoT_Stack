@@ -175,6 +175,22 @@ services:
       - "8888:8080"
     networks: [iot]
 
+  npm:
+      container_name: npm
+      image: jc21/nginx-proxy-manager:latest
+      restart: unless-stopped
+      environment:
+        - TZ=${TZ}
+        - DISABLE_IPV6=true
+      ports:
+        - "80:80"
+        - "81:81"
+        - "443:443"
+      volumes:
+        - ./volumes/npm/data:/data
+        - ./volumes/npm/letsencrypt:/etc/letsencrypt
+      networks: [iot] 
+
 networks:
   iot:
     name: iot
