@@ -189,7 +189,25 @@ services:
       volumes:
         - ./volumes/npm/data:/data
         - ./volumes/npm/letsencrypt:/etc/letsencrypt
-      networks: [iot] 
+      networks: [iot]
+
+  spoolman:
+      image: ghcr.io/donkie/spoolman:latest
+      container_name: spoolman
+      security_opt:
+        - no-new-privileges:true
+      networks:
+        - iot
+      volumes:
+        - type: bind
+          source: ./volumes/spoolman
+          target: /home/app/.local/share/spoolman   # Do NOT modify this line
+      ports:
+        - "7912:8000"
+      environment:
+        - TZ=Europe/Helsinki
+        - FORWARDED_ALLOW_IPS=*   # needed for NPM reverse proxy + HTTPS QR scanning
+      restart: unless-stopped      
 
 networks:
   iot:
