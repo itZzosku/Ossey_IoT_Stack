@@ -207,7 +207,20 @@ services:
       environment:
         - TZ=Europe/Helsinki
         - FORWARDED_ALLOW_IPS=*   # needed for NPM reverse proxy + HTTPS QR scanning
-      restart: unless-stopped      
+      restart: unless-stopped
+
+  cloudflare-ddns:
+    image: timothyjmiller/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CF_DDNS_API_TOKEN}
+      - DOMAINS=ddns.osseyman.com
+      - PROXIED=false
+      - IP6_PROVIDER=none
+      - UPDATE_CRON=@every 1m
+    restart: unless-stopped        
 
 networks:
   iot:
